@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المستكشف التفاعلي لحقيبة MIMO التعليمية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Calm Tech -->
+    <!-- Application Structure Plan: The SPA is designed as an interactive dashboard. It uses a persistent sidebar for navigation between the five lectures and a main content area that dynamically updates. This structure was chosen over a linear report format to empower users to explore content non-linearly, compare lectures easily, and engage with the material more interactively. The core user flow is: select a lecture from the sidebar -> view its detailed breakdown (objectives, concepts, activities) in the main area -> interact with visualizations and tabbed content. This enhances usability by making all key information accessible within a few clicks. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Evolution from MIMO to Massive MIMO. Goal: Show Progression. Viz: HTML/CSS flow diagram. Interaction: Visual flow. Justification: Simple, clear representation of a process. Library: Tailwind CSS.
+        - Report Info: Massive MIMO Challenges. Goal: Compare/Quantify. Viz: Bar Chart. Interaction: Hover tooltips. Justification: Visually represents the "weight" of different challenges, making them comparable. Library: Chart.js.
+        - Report Info: XL-MIMO vs CF-mMIMO. Goal: Compare. Viz: Side-by-side feature list. Interaction: Static comparison. Justification: Direct comparison is most effective for distinct feature sets. Library: Tailwind CSS.
+        - Report Info: RIS and MA concepts. Goal: Explain. Viz: Simple explanatory HTML/CSS diagrams + Interactive RIS visualization. Interaction: Visual explanation + animated signal reflection. Justification: Simplifies complex technical concepts into visual components and provides a dynamic illustration for RIS. Library: Tailwind CSS, Vanilla JS.
+        - Report Info: Learning activities (Pre/During/Post). Goal: Organize. Viz: Tabbed interface. Interaction: Clicking tabs to switch content. Justification: Organizes a large amount of related information cleanly, reducing cognitive load. Method: JS/Tailwind.
+        - Report Info: Overall program analysis (SWOT, Fishbone, PDCA). Goal: Summarize. Viz: Styled HTML grid/lists. Interaction: Static display. Justification: Presents analytical frameworks in a structured, easy-to-read format. Library: Tailwind CSS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #F8F4E8;
+            color: #434242;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            border-right: 4px solid transparent;
+        }
+        .nav-link.active {
+            background-color: #e6efec;
+            color: #1a5c4d;
+            border-right-color: #5B9A8B;
+        }
+        .nav-link:hover {
+            background-color: #e6efec;
+            transform: translateX(-2px);
+        }
+        .tab-btn.active {
+            background-color: #5B9A8B;
+            color: #ffffff;
+        }
+        .flow-diagram-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            font-weight: 500;
+        }
+        .flow-diagram-arrow {
+            font-size: 2rem;
+            color: #9ca3af;
+            margin: 0 0.5rem;
+        }
+        .list-unstyled {
+            list-style: none;
+            padding-left: 0;
+        }
+        /* RIS Visualization Specific Styles */
+        .ris-simulation-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 250px;
+            background-color: #f0fdf4;
+            border: 1px solid #d1fae5;
+            border-radius: 0.75rem;
+            margin: 2rem auto;
+            overflow: hidden; /* Ensure signal stays within bounds */
+        }
+        .ris-element {
+            position: absolute;
+            width: 100px;
+            height: 150px;
+            background-color: #5B9A8B;
+            border-radius: 0.5rem;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%); /* Centered */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .ris-source, .ris-target {
+            position: absolute; /* Added absolute positioning */
+            background-color: #fca5a5;
+            border-radius: 9999px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: #b91c1c;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            top: 50%; /* Center vertically */
+            transform: translateY(-50%); /* Center vertically */
+        }
+        .ris-source {
+            left: 20px; /* Fixed position from left */
+        }
+        .ris-target {
+            right: 20px; /* Fixed position from right */
+        }
+        .signal {
+            position: absolute;
+            background-color: #fcd34d;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            opacity: 0;
+            box-shadow: 0 0 8px #fcd34d;
+            transform: translate(-50%, -50%); /* Always center the signal dot around its left/top */
+            /* Transition properties will be set by JS */
+        }
+        .signal.active {
+            opacity: 1;
+        }
+
+        /* Lecture 1 Beamforming Visualization */
+        .beamforming-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 200px;
+            background-color: #f0f9ff;
+            border: 1px solid #e0f2fe;
+            border-radius: 0.75rem;
+            margin: 2rem auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            overflow: hidden;
+            padding: 1rem;
+        }
+        .transmitter {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+        .antenna {
+            width: 4px;
+            height: 20px;
+            background-color: #3b82f6;
+            margin-bottom: 2px;
+            border-radius: 2px;
+        }
+        .beam {
+            position: absolute;
+            left: 50px; /* Start after transmitter */
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(to right, rgba(255, 165, 0, 0.5), transparent);
+            height: 50px; /* Initial height (wide beam) */
+            width: 500px;
+            border-radius: 50%;
+            filter: blur(5px);
+            opacity: 0.8;
+            transition: height 0.5s ease-in-out;
+        }
+        .receiver {
+            width: 30px;
+            height: 30px;
+            background-color: #10b981;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+            right: 20px;
+            position: absolute;
+        }
+
+        /* Lecture 2 Pilot Contamination */
+        .contamination-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 250px;
+            background-color: #fffbeb;
+            border: 1px solid #fef3c7;
+            border-radius: 0.75rem;
+            margin: 2rem auto;
+            overflow: hidden;
+        }
+        .bs {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background-color: #a78bfa;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .user-device {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: #f87171;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .pilot-signal {
+            position: absolute;
+            background-color: #fcd34d;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            opacity: 0;
+            transition: all 0.8s ease-out;
+            box-shadow: 0 0 6px #fcd34d;
+        }
+        .contamination-indicator {
+            position: absolute;
+            background-color: rgba(252, 165, 165, 0.7);
+            border-radius: 0.75rem;
+            padding: 0.5rem;
+            color: #b91c1c;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            text-align: center;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        /* Lecture 3 Cell-Free mMIMO */
+        .cell-free-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 300px;
+            background-color: #ecfdf5;
+            border: 1px solid #d1fae5;
+            border-radius: 0.75rem;
+            margin: 2rem auto;
+            overflow: hidden;
+        }
+        .cell-boundary {
+            position: absolute;
+            border: 1px dashed #4ade80;
+            border-radius: 50%;
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #065f46;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .access-point {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            background-color: #10b981;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        .cell-boundary.hidden {
+            opacity: 0;
+        }
+        .access-point.visible {
+            opacity: 1;
+        }
+
+        /* Lecture 5 THz Obstacle */
+        .thz-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 200px;
+            background-color: #fef2f2;
+            border: 1px solid #fee2e2;
+            border-radius: 0.75rem;
+            margin: 2rem auto;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+        }
+        .thz-sender, .thz-receiver {
+            width: 50px;
+            height: 50px;
+            background-color: #93c5fd;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #1e40af;
+            font-size: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .thz-signal-path {
+            position: absolute;
+            height: 5px;
+            background-color: #fcd34d;
+            top: 50%;
+            transform: translateY(-50%);
+            left: 80px; /* Start after sender */
+            width: calc(100% - 160px); /* Width between sender and receiver */
+            transition: opacity 0.5s ease-in-out;
+        }
+        .thz-obstacle {
+            position: absolute;
+            width: 80px;
+            height: 100px;
+            background-color: #9ca3af;
+            border-radius: 0.5rem;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .thz-obstacle.visible {
+            opacity: 1;
+        }
+        .thz-signal-path.blocked {
+            opacity: 0.2; /* Show faded signal when blocked */
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="min-h-screen lg:grid lg:grid-cols-12">
+        <aside id="sidebar" class="fixed top-0 right-0 h-full bg-white lg:relative lg:col-span-3 xl:col-span-2 shadow-lg lg:shadow-none z-20 transform translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+            <div class="p-4 pt-8">
+                <h2 class="text-2xl font-bold text-center text-[#5B9A8B]">مستكشف الحقيبة</h2>
+                <p class="text-sm text-center text-gray-500 mt-1">تقنية MIMO</p>
+            </div>
+            <nav class="mt-8">
+                <ul>
+                    <li><a href="#welcome" class="nav-link block p-4 text-lg font-semibold text-gray-700">مقدمة</a></li>
+                    <li><a href="#lecture-1" class="nav-link block p-4 text-lg font-semibold text-gray-700">المحاضرة الأولى</a></li>
+                    <li><a href="#lecture-2" class="nav-link block p-4 text-lg font-semibold text-gray-700">المحاضرة الثانية</a></li>
+                    <li><a href="#lecture-3" class="nav-link block p-4 text-lg font-semibold text-gray-700">المحاضرة الثالثة</a></li>
+                    <li><a href="#lecture-4" class="nav-link block p-4 text-lg font-semibold text-gray-700">المحاضرة الرابعة</a></li>
+                    <li><a href="#lecture-5" class="nav-link block p-4 text-lg font-semibold text-gray-700">المحاضرة الخامسة</a></li>
+                     <li><a href="#analysis" class="nav-link block p-4 text-lg font-semibold text-gray-700">أدوات التحليل</a></li>
+                </ul>
+            </nav>
+            <div class="absolute bottom-4 left-4 right-4 text-center text-xs text-gray-400">
+                <p>تطبيق ويب تفاعلي</p>
+            </div>
+        </aside>
+
+        <button id="menu-toggle" class="lg:hidden fixed top-4 right-4 z-30 p-2 bg-white rounded-md shadow-md">
+            <svg id="menu-open-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <svg id="menu-close-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+
+
+        <main class="lg:col-span-9 xl:col-span-10 p-4 sm:p-6 lg:p-8">
+            <div id="content-area">
+                <!-- Content will be dynamically injected here -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const contentData = {
+                welcome: {
+                    title: "مرحباً بكم في المستكشف التفاعلي لحقيبة MIMO التعليمية",
+                    description: "هذا التطبيق هو دليلك التفاعلي لاستكشاف محتوى حقيبة التعليم المدمج حول تقنية MIMO. تم تصميم هذه التجربة لتسهيل فهم المحاضرات، الأنشطة، والأهداف التعليمية بطريقة مرئية ومنظمة. يمكنك التنقل بين المحاضرات الخمس باستخدام القائمة الجانبية لاستكشاف كل جزء من الحقيبة التعليمية.",
+                    features: [
+                        { icon: '🧭', text: 'تنقل سهل بين المحاضرات.' },
+                        { icon: '📊', text: 'تصورات بيانية للمفاهيم الأساسية.' },
+                        { icon: '📝', text: 'تنظيم واضح للأنشطة والمهام.' },
+                        { icon: '🎯', text: 'عرض تفصيلي للأهداف التعليمية.' }
+                    ]
+                },
+                'lecture-1': {
+                    title: "المحاضرة الأولى: أساسيات MIMO والتحول إلى Massive MIMO (mMIMO)",
+                    objectives: {
+                        general: "أن يفهم المتعلم المبادئ الأساسية لتقنية MIMO والتحول إلى Massive MIMO (mMIMO) ودورها الحيوي في شبكات الجيل الخامس (5G).",
+                        behavioral: [
+                            "أن يشرح المتعلم الفرق بين MIMO التقليدي و Massive MIMO.",
+                            "أن يحدد المتعلم ثلاث مزايا رئيسية لـ Massive MIMO في سياق 5G (مثل الكفاءة الطيفية والطاقة، تقليل زمن الوصول).",
+                            "أن يصف المتعلم كيف يساهم Massive MIMO في تبسيط طبقة MAC."
+                        ]
+                    },
+                    concepts: {
+                        title: "من البسيط إلى الهائل: تطور تقنية الهوائيات",
+                        description: "تقنية MIMO لم تظهر من فراغ، بل هي تطور طبيعي لزيادة كفاءة الاتصالات اللاسلكية. يوضح المخطط التالي هذا التطور التدريجي.",
+                        flow: [
+                            { name: "SISO", details: "هوائي واحد للإرسال وهوائي واحد للاستقبال. أبسط أشكال الاتصال.", color: "bg-amber-100" },
+                            { name: "MIMO", details: "هوائيات متعددة في كلا الطرفين لزيادة السعة والموثوقية.", color: "bg-sky-100" },
+                            { name: "MU-MIMO", details: "خدمة عدة مستخدمين بنفس الموارد الزمنية والترددية.", color: "bg-teal-100" },
+                            { name: "Massive MIMO", details: "استخدام عدد هائل من الهوائيات في المحطة القاعدة لزيادة الكفاءة بشكل جذري.", color: "bg-green-100" },
+                        ],
+                        visuals: `
+                            <h4 class="font-bold text-lg text-[#5B9A8B] mt-6 mb-4 text-center">تصور تفاعلي: تشكيل الحزمة (Beamforming)</h4>
+                            <p class="text-gray-600 text-center mb-4">استخدم الأزرار لتغيير عدد الهوائيات وشاهد كيف يتغير تركيز الإشارة.</p>
+                            <div class="beamforming-container">
+                                <div class="transmitter">
+                                    <div id="antenna-array">
+                                        <!-- Antennas will be generated by JS -->
+                                    </div>
+                                    <span class="text-sm font-semibold mt-2 text-gray-700">المرسل</span>
+                                </div>
+                                <div id="beam" class="beam"></div>
+                                <div class="receiver">المستقبل</div>
+                            </div>
+                            <div class="text-center mt-4">
+                                <button id="antennas-low-btn" class="bg-[#5B9A8B] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#4a8070] transition-colors shadow-md">
+                                    هوائيات قليلة
+                                </button>
+                                <button id="antennas-medium-btn" class="bg-[#5B9A8B] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#4a8070] transition-colors shadow-md ml-4">
+                                    هوائيات متوسطة
+                                </button>
+                                <button id="antennas-high-btn" class="bg-[#5B9A8B] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#4a8070] transition-colors shadow-md ml-4">
+                                    هوائيات كثيرة
+                                </button>
+                            </div>
+                        `
+                    },
+                    activities: {
+                        pre: {
+                            title: "التحضير الذاتي",
+                            items: [
+                                "**المواد التحضيرية:**",
+                                "- مقالة: \"Massive MIMO for next generation wireless systems\" (أو ملخص تنفيذي منها).",
+                                "- فيديو قصير (5 دقائق): شرح مبسط لمفهوم MIMO الأساسي (يُقدم رابط لفيديو توضيحي).",
+                                "**الاختبار القصير التمهيدي (Google Form):**",
+                                "- **الهدف:** تقييم المعرفة الأولية للمتعلمين بمفهوم الهوائيات المتعددة وتوقعاتهم من Massive MIMO.",
+                                "- **الأسئلة المقترحة:**",
+                                "  1. ما هو المفهوم الأساسي لتقنية MIMO في الاتصالات اللاسلكية؟ (خيارات متعددة)",
+                                "  2. ما هي الفائدة الرئيسية التي تتوقعها من استخدام عدد كبير جدًا من الهوائيات في محطة القاعدة (Massive MIMO)؟ (سؤال مفتوح)",
+                                "  3. اذكر تطبيقًا واحدًا لتقنية MIMO تعرفه. (سؤال مفتوح)",
+                                "**الرابط:** <a href='https://forms.gle/YOUR_PRE_QUIZ_LINK_1' target='_blank' class='text-blue-600 hover:underline'>اختبار المحاضرة التمهيدي 1</a>",
+                                "**منتدى النقاش:**",
+                                "- **الهدف:** تشجيع التفكير المسبق وتبادل الأفكار حول دور MIMO في تحسين الاتصال.",
+                                "- **السؤال المطروح:** \"كيف يمكن لتقنية MIMO أن تساهم في تحسين جودة الاتصال في المناطق المزدحمة أو ذات التغطية الضعيفة؟\""
+                            ]
+                        },
+                        during: {
+                            title: "أثناء المحاضرة (30 دقيقة)",
+                            items: [
+                                "**نشاط 1 (استطلاع رأي مباشر - 3 دقائق):**",
+                                "- **السؤال:** \"ما هي الميزة الأكثر أهمية لـ Massive MIMO برأيك في تحسين تجربة المستخدم؟\" (خيارات: سرعة أعلى، موثوقية أفضل، استهلاك طاقة أقل، تقليل التداخل). مناقشة سريعة للنتائج.",
+                                "**نشاط 2 (مناقشة جماعية قصيرة - غرف فرعية - 7 دقائق):**",
+                                "- **السيناريو:** تقسيم المتعلمين إلى مجموعات (3-4 أفراد) لمدة 5 دقائق لمناقشة: \"كيف يمكن لـ Massive MIMO أن يدعم تطبيقات تتطلب نطاقًا تردديًا عاليًا جدًا مثل الواقع الافتراضي أو الواقع المعزز؟\" ثم مشاركة الأفكار الرئيسية (دقيقتان)."
+                            ]
+                        },
+                        post: {
+                            title: "التطبيق والتعميق",
+                            items: [
+                                "**النشاط التطبيقي:**",
+                                "- **دراسة حالة قصيرة:** تحليل تقرير موجز (يُقدم للم متعلمين) حول تطبيق Massive MIMO في شبكة 5G لشركة اتصالات معينة، وتحديد الفوائد التي حققتها الشركة.",
+                                "**المهام:**",
+                                "- **مهمة 1 (تقييمية - Google Form):** اختبار قصير (10 أسئلة) حول المفاهيم الرئيسية لـ MIMO و Massive MIMO التي تمت مناقشتها في المحاضرة.",
+                                "**الرابط:** <a href='https://forms.gle/YOUR_POST_QUIZ_LINK_1' target='_blank' class='text-blue-600 hover:underline'>اختبار المحاضرة 1</a>",
+                                "- **مهمة 2 (بحثية):** ابحث عن مقالة حديثة (من 2024-2025) من \"IEEE Communications Magazine\" تتناول تطبيقًا جديدًا لـ Massive MIMO، واكتب ملخصًا من 200 كلمة لأبرز النقاط."
+                            ]
+                        }
+                    },
+                    softSkills: ["التفكير النقدي", "التواصل الفعال", "حل المشكلات"],
+                },
+                'lecture-2': {
+                    title: "المحاضرة الثانية: تحديات Massive MIMO وحلولها",
+                    objectives: {
+                        general: "أن يفهم المتعلم التحديات الرئيسية التي تواجه نشر وتطبيق Massive MIMO والحلول المقترحة للتغلب عليها.",
+                        behavioral: [
+                            "أن يحدد المتعلم ثلاثة تحديات رئيسية في تنفيذ Massive MIMO (مثل تكلفة البنية التحتية، تقدير القناة، تلوث الطيار).",
+                            "أن يشرح المتعلم مفهوم \"تلوث الطيار\" وتأثيره على أداء Massive MIMO.",
+                            "أن يصف المتعلم حلاً واحدًا على الأقل لتحدي تقدير القناة في Massive MIMO."
+                        ]
+                    },
+                    concepts: {
+                        title: "تحديات تطبيق Massive MIMO",
+                        description: "على الرغم من مزاياها الهائلة، تواجه تقنية Massive MIMO تحديات كبيرة عند التطبيق العملي. يوضح الرسم البياني التالي أبرز هذه التحديات بناءً على درجة تأثيرها وتعقيدها.",
+                        chartData: {
+                            labels: ['تكلفة البنية التحتية', 'تقدير القناة (CE)', 'تلوث الطيار', 'تعقيد معالجة الإشارة', 'كفاءة الطاقة'],
+                            data: [85, 95, 90, 80, 75],
+                        },
+                        visuals: `
+                            <h4 class="font-bold text-lg text-[#5B9A8B] mt-6 mb-4 text-center">تصور تفاعلي: تلوث الطيار (Pilot Contamination)</h4>
+                            <p class="text-gray-600 text-center mb-4">شاهد كيف يمكن لإشارات الطيار المتشابهة أن تتداخل في خلايا مختلفة.</p>
+                            <div class="contamination-container">
+                                <div class="bs" style="left: 10%; top: 30%;">BS 1</div>
+                                <div class="bs" style="left: 80%; top: 70%;">BS 2</div>
+                                <div class="user-device" id="user1" style="left: 25%; top: 40%;">U1</div>
+                                <div class="user-device" id="user2" style="left: 70%; top: 60%;">U2</div>
+                                <div class="pilot-signal" id="pilot1"></div>
+                                <div class="pilot-signal" id="pilot2"></div>
+                                <div class="contamination-indicator" id="contamination-msg">تلوث طيار!</div>
+                            </div>
+                            <div class="text-center mt-4">
+                                <button id="start-pilots-btn" class="bg-[#5B9A8B] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#4a8070] transition-colors shadow-md">
+                                    بدء إرسال الطيار
+                                </button>
+                                <button id="reset-pilots-btn" class="bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400 transition-colors shadow-md ml-4">
+                                    إعادة تعيين
+                                </button>
+                            </div>
+                        `
+                    },
+                    activities: {
+                        pre: {
+                            title: "التحضير الذاتي",
+                            items: [
+                                "**المواد التحضيرية:**",
+                                "- مقالة: \"A Comprehensive Study on Challenges and Solutions in Massive MIMO-Detection Methods\" (أو الأقسام ذات الصلة).",
+                                "- تقرير: \"Massive MIMO Market Size\" (أو ملخص تنفيذي منه حول التحديات).",
+                                "- فيديو قصير (5 دقائق): شرح مبسط لمفهوم \"تقدير القناة\" في الاتصالات اللاسلكية (يُقدم رابط لفيديو توضيحي).",
+                                "**الاختبار القصير التمهيدي (Google Form):**",
+                                "- **الهدف:** تقييم فهم المتعلمين للتحديات المتوقعة في Massive MIMO.",
+                                "- **الأسئلة المقترحة:**",
+                                "  1. اذكر تحديًا واحدًا تتوقعه عند نشر أنظمة Massive MIMO. (سؤال مفتوح)",
+                                "  2. ما هي المشكلة التقنية التي تعتقد أنها الأكثر تعقيدًا في تنفيذ Massive MIMO على نطاق واسع؟ (سؤال مفتوح)",
+                                "**الرابط:** <a href='https://forms.gle/YOUR_PRE_QUIZ_LINK_2' target='_blank' class='text-blue-600 hover:underline'>اختبار المحاضرة التمهيدي 2</a>",
+                                "**منتدى النقاش:**",
+                                "- **الهدف:** تشجيع التفكير في الحلول العملية للتحديات.",
+                                "- **السؤال المطروح:** \"كيف يمكن لشركات الاتصالات التغلب على التكاليف الأولية المرتفعة لنشر أنظمة Massive MIMO؟\""
+                            ]
+                        },
+                        during: {
+                            title: "أثناء المحاضرة (30 دقيقة)",
+                            items: [
+                                "**نشاط 1 (استطلاع رأي مباشر - 3 دقائق):**",
+                                "- **السؤال:** \"أي من التحديات التالية تعتقد أنه يمثل العائق الأكبر أمام النشر الواسع لـ Massive MIMO؟\" (خيارات: التكلفة، تعقيد تقدير القناة، تلوث الطيار، الحاجة إلى مهارات جديدة).",
+                                "**نشاط 2 (حل مشكلة قصيرة - غرف فرعية - 7 دقائق):**",
+                                "- **السيناريو:** عرض سيناريو: \"شركة اتصالات تواجه مشكلة في الحفاظ على جودة الخدمة في منطقة حضرية ذات كثافة سكانية عالية بسبب التداخل.\" اطلب من المتعلمين في مجموعات صغيرة (3-4 أفراد) اقتراح حلول باستخدام مفاهيم Massive MIMO التي تعلموها (5 دقائق مناقشة، دقيقتان مشاركة)."
+                            ]
+                        },
+                        post: {
+                            title: "التطبيق والتعميق",
+                            items: [
+                                "**النشاط التطبيقي:**",
+                                "- **تحليل مقارن:** إعداد جدول مقارنة بين تحديين رئيسيين لـ Massive MIMO (مثلاً: التكلفة وتقدير القناة)، مع ذكر حلول لكل منهما ومزاياها وعيوبها.",
+                                "**المهام:**",
+                                "- **مهمة 1 (تقييمية - Google Form):** اختبار قصير (10 أسئلة) حول تحديات Massive MIMO وحلولها.",
+                                "**الرابط:** <a href='https://forms.gle/YOUR_POST_QUIZ_LINK_2' target='_blank' class='text-blue-600 hover:underline'>اختبار المحاضرة 2</a>",
+                                "- **مهمة 2 (بحثية):** ابحث عن ورقة بحثية حديثة (من 2024-2025) تتناول تطبيق خوارزمية معينة (مثل Belief Propagation) لحل مشكلة الكشف في Massive MIMO، واكتب فقرة تشرح كيف تعمل هذه الخوارزمية."
+                            ]
+                        }
+                    },
+                    softSkills: ["التحليلية", "حل المشكلات", "التفكير النقدي"],
+                },
+                 'lecture-3': {
+                    title: "المحاضرة الثالثة: MIMO المتقدمة لشبكات الجيل السادس (XL-MIMO و Cell-Free mMIMO)",
+                    objectives: {
+                        general: "أن يستكشف المتعلم مفاهيم MIMO المتقدمة لشبكات الجيل السادس (6G)، بما في ذلك Extremely Large MIMO (XL-MIMO) و Cell-Free mMIMO (CF-mMIMO).",
+                        behavioral: [
+                            "أن يشرح المتعلم مفهوم Extremely Large MIMO (XL-MIMO) وميزاته.",
+                            "أن يصف المتعلم مبدأ Cell-Free mMIMO (CF-mMIMO) وفوائده في تقليل التداخل.",
+                            "أن يحلل المتعلم كيف تساهم هذه التقنيات في تحقيق أهداف 6G من حيث الأداء والجودة."
+                        ]
+                    },
+                    concepts: {
+                        title: "مقارنة بين تقنيات MIMO للجيل السادس",
+                        description: "مع التوجه نحو 6G، تظهر مفاهيم جديدة لـ MIMO تعد بأداء غير مسبوق. هنا مقارنة بين أبرز تقنيتين: XL-MIMO و Cell-Free mMIMO.",
+                        comparison: [
+                            { 
+                                name: "XL-MIMO (Extremely Large MIMO)", 
+                                features: ["عدد هائل جداً من الهوائيات", "زيادة ضخمة في الكفاءة الطيفية", "تحديات هندسية في الحجم", "يعتمد على محطة قاعدة مركزية"]
+                            },
+                            { 
+                                name: "Cell-Free mMIMO",
+                                features: ["غياب حدود الخلايا الواضحة", "تقليل مشاكل التسليم (Handover)", "تحسين أداء المستخدمين على الحافة", "يعتمد على وحدات وصول موزعة"]
+                            }
+                        ],
+                        visuals: `
+                            <h4 class="font-bold text-lg text-[#5B9A8B] mt-6 mb-4 text-center">تصور تفاعلي: Cell-Free mMIMO</h4>
+                            <p class="text-gray-600 text-center mb-4">شاهد كيف تختفي حدود الخلايا مع تقنية Cell-Free.</p>
+                            <div class="cell-free-container">
+                                <div class="cell-boundary" style="left: 10%; top: 10%; width: 120px; height: 120px;">خلية أ</div>
+                                <div class="cell-boundary" style="left: 60%; top: 10%; width: 120px; height: 120px;">خلية ب</div>
+                                <div class="cell-boundary" style="left: 35%; top: 55%; width: 120px; height: 120px;">خلية ج</div>
+
+                                <div class="access-point" style="left: 15%; top: 15%;">AP1</div>
+                                <div class="access-point" style="left: 65%; top: 15%;">AP2</div>
+                                <div class="access-point" style="left: 40%; top: 60%;">AP3</div>
+                                <div class="access-point" style="left: 20%; top: 45%;">AP4</div>
+                                <div class="access-point" style="left: 75%; top: 40%;">AP5</div>
+                                <div class="access-point" style="left: 50%; top: 30%;">AP6</div>
+                                <div class="access-point" style="left: 85%; top: 80%;">AP7</div>
+                                <div class="access-point" style="left: 5%; top: 80%;">AP8</div>
+                            </div>
+                            <div class="text-center mt-4">
+                                <button id="toggle-cell-free-btn" class="bg-[#5B9A8B] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#4a8070] transition-colors shadow-md">
+                                    تفعيل Cell-Free
+                                </button>
+                                <button id="reset-cell-free-btn" class="bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400 transition-colors shadow-md ml-4">
+                                    إعادة تعيين
+                                </button>
+                            </div>
+                        `
+                    },
+                    activities: {
+                        pre: {
+                            title: "التحضير الذاتي",
+                            items: [
+                                "**المواد التحضيرية:**",
+                                "- مقالة: \"MIMO technologies for 6G Networks such as massive MIMO (mMIMO), extremely large MIMO (XL-MIMO), Intelligent Reflecting Surfaces (IRS), and Cell-Free mMIMO (CF-mMIMO)\".",
+                                "- مقالة: \"Antennas in the era of 6G will enable ubiquitous distributed MIMO\".",
+                                "- فيديو قصير (5 دقائق): مقدمة عن رؤية 6G (يُقدم رابط لفيديو توضيحي).",
+                                "**الاختبار القصير التمهيدي (Google Form):**",
+                                "- **الهدف:** تقييم المعرفة الأولية بمتطلبات 6G وتوقعات المتعلمين من تقنيات الهوائيات المتقدمة.",
+                                "- **الأسئلة المقترحة:**",
+                                "  1. اذكر ميزة واحدة تتوقعها من شبكات الجيل السادس (6G). (سؤال مفتوح)",
+                                "  2. كيف يمكن لتقنيات الهوائيات المتقدمة أن تلبي متطلبات 6G من حيث السعة والتغطية؟ (سؤال مفتوح)",
+                                "**الرابط:** <a href='https://forms.gle/YOUR_PRE_QUIZ_LINK_3' target='_blank' class='text-blue-600 hover:underline'>اختبار المحاضرة التمهيدي 3</a>",
+                                "**منتدى النقاش:**",
+                                "- **الهدف:** تشجيع التفكير في الفوائد المحتملة للتقنيات المتقدمة.",
+                                "- **السؤال المطروح:** \"ما هي الفوائد المحتملة لعدم وجود حدود خلايا واضحة في شبكات الجيل السادس (Cell-Free mMIMO)؟\""
+                            ]
+                        },
+                        during: {
+                            title: "أثناء المحاضرة (30 دقيقة)",
+                            items: [
+                                "**نشاط 1 (استطلاع رأي مباشر - 3 دقائق):**",
+                                "- **السؤال:** \"أي من التقنيتين، XL-MIMO أم CF-mMIMO، تعتقد أنها ستحقق تأثيرًا أكبر على تجربة المستخدم النهائي في 6G؟\" (خيارات: XL-MIMO، CF-mMIMO، كلاهما بنفس القدر، لا أعرف).",
+                                "**نشاط 2 (تفكير جماعي - غرف فرعية - 7 دقائق):**",
+                                "- **السيناريو:** عرض سيناريو: \"مدينة ذكية تخطط لنشر شبكة 6G لدعم عدد هائل من أجهزة إنترنت الأشياء والمركبات ذاتية القيادة.\" اطلب من المتعلمين في مجموعات صغيرة (3-4 أفراد) اقتراح كيف يمكن لـ XL-MIMO و/أو CF-mMIMO أن يسهما في تحقيق أهداف هذه المدينة (5 دقائق مناقشة، دقيقتان مشاركة)."
+                            ]
+                        },
+                        post: {
+                            title: "التطبيق والتعميق",
+                            items: [
+                                "**النشاط التطبيقي:**",
+                                "- **تصميم مفهوم أولي:** رسم مخطط بسيط (يدوي أو رقمي) يوضح كيف يمكن نشر نظام Cell-Free mMIMO في منطقة حضرية، مع تحديد مواقع الوحدات الموزعة.",
+                                "**المهام:**",
+                                "- **مهمة 1 (تقييمية - Google Form):** اختبار قصير (10 أسئلة) حول XL-MIMO و Cell-Free mMIMO.",
+                                "**الرابط:** <a href='https://forms.gle/YOUR_POST_QUIZ_LINK_3' target='_blank' class='text-blue-600 hover:underline'>اختبار المحاضرة 3</a>",
+                                "- **مهمة 2 (بحثية):** ابحث عن ورقة بحثية حديثة (من 2024-2025) تتناول تحديًا معينًا في XL-MIMO أو CF-mMIMO، واكتب ملخصًا موجزًا عن التحدي والحلول المقترحة."
+                            ]
+                        }
+                    },
+                    softSkills: ["التفكير المنظومي", "الابتكار", "العمل الجماعي"],
+                },
+                'lecture-4': {
+                    title: "المحاضرة الرابعة: الأسطح الذكية العاكسة (RIS) والهوائيات المتحركة (MA)",
+                    objectives: {
+                        general: "أن يتعرف المتعلم على التقنيات المبتكرة مثل RIS و MA وكيف تعزز أداء أنظمة MIMO.",
+                        behavioral: [
+                            "أن يشرح المتعلم مبدأ عمل RIS ودورها في هندسة القنوات اللاسلكية.",
+                            "أن يصف المتعلم مفهوم MA ومزاياها في استغلال التباين المكاني.",
+                            "أن يحلل المتعلم كيف تساهم RIS و MA في تحسين تشكيل الحزمة."
+                        ]
+                    },
+                    concepts: {
+                        title: "هندسة البيئة اللاسلكية بذكاء",
+                        description: "بدلاً من التكيف مع القناة اللاسلكية فقط، تسمح التقنيات الجديدة مثل RIS و MA بالتحكم فيها وتشكيلها لتحسين الأداء.",
+                        diagrams: [
+                            {
+                                name: "الأسطح الذكية العاكسة (RIS)",
+                                desc: "أسطح شبه سلبية تعكس الإشارات الواردة بطريقة مبرمجة لتقوية الإشارة في اتجاه معين أو إلغاء التداخل، مما يحول العوائق إلى مساعدات.",
+                                icon: '📡'
+                            },
+                            {
+                                name: "الهوائيات المتحركة (MA)",
+                                desc: "هوائيات يمكنها التحرك ميكانيكيًا في نطاق صغير لإيجاد أفضل موقع استقبال للإشارة، مستغلة التباين المكاني الدقيق للقناة لتحسين الجودة.",
+                                icon: '↔️'
+                            }
+                        ],
+                        visuals: `
+                            <h4 class="font-bold text-lg text-[#5B9A8B] mt-6 mb-4 text-center">تصور تفاعلي: مبدأ عمل السطح الذكي العاكس (RIS)</h4>
+                            <p class="text-gray-600 text-center mb-4">اضغط على زر "بدء الانعكاس" لمشاهدة كيف يقوم السطح الذكي العاكس بتوجيه الإشارة.</p>
+                            <div class="ris-simulation-container">
+                                <div class="ris-source"> المرسل </div>
+                                <div class="ris-element"> RIS </div>
+                                <div class="ris-target"> المستقبل </div>
+                                <div id="signal" class="signal"></div>
+                            </div>
+                            <div class="text-center mt-4">
+                                <button id="start-reflection-btn" class="bg-[#5B9A8B] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#4a8070] transition-colors shadow-md">
+                                    بدء الانعكاس
+                                </button>
+                                <button id="reset-reflection-btn" class="bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-semibold hover:bg-gray-400 transition-colors shadow-md ml-4">
+                                    إعادة تعيين
+                                </button>
+                            </div>
+                        `
+                    },
+                    activities: {
+                        pre: {
+                            title: "التحضير الذاتي",
+                            items: [
+                                "**المواد التحضيرية:**",
+                                "- مقالة: \"Reconfigurable intelligent surface (RIS) has been envisioned as a promising technique\".",
+                                "- مقالة: \"Movable antenna (MA) technology is a recent development\".",
+                                "- فيديو قصير (5 دقائق): شرح مبسط لمفهوم \"التحكم في البيئة اللاسلكية\" (يُقدم رابط لفيديو توضيحي).",
+                                "**الاختبار القصير التمهيدي (Google Form):**",
+                                "- **الهدف:** تقييم المعرفة الأولية بكيفية تحسين الإشارة اللاسلكية بطرق مبتكرة.",
+                                "- **الأسئلة المقترحة:**",
+                                "  1. كيف يمكن لسطح عاكس أن يغير مسار الإشارة اللاسلكية بطريقة ذكية؟ (سؤال مفتوح)",
+                                "  2. ما هي الفائدة التي تتوقعها من هوائي يمكنه تغيير موقعه قليلاً؟ (سؤال مفتوح)",
+                                "**الرابط:** <a href='https://forms.gle/YOUR_PRE_QUIZ_LINK_4' target='_blank' class='text-blue-600 hover:underline'>اختبار المحاضرة التمهيدي 4</a>",
+                                "**منتدى النقاش:**",
+                                "- **الهدف:** تشجيع التفكير في التطبيقات المحتملة للتقنيات الجديدة.",
+                                "- **السؤال المطروح:** \"ما هي التطبيقات المحتملة للأسطح الذكية العاكسة في البيئات الداخلية مثل المكاتب أو المنازل؟\""
+                            ]
+                        },
+                        during: {
+                            title: "أثناء المحاضرة (30 دقيقة)",
+                            items: [
+                                "**نشاط 1 (استطلاع رأي مباشر - 3 دقائق):**",
+                                "- **السؤال:** \"أي من التقنيتين (RIS أم MA) تعتقد أنها ستكون أسهل في النشر على نطاق واسع في المستقبل القريب؟\" (خيارات: RIS، MA، كلاهما صعب، كلاهما سهل).",
+                                "**نشاط 2 (تفكير جماعي - غرف فرعية - 7 دقائق):**",
+                                "- **السيناريو:** عرض سيناريو: \"مبنى مكتبي يعاني من ضعف تغطية Wi-Fi في بعض المناطق بسبب الجدران والعوائق.\" اطلب من المتعلمين في مجموعات صغيرة (3-4 أفراد) اقتراح كيف يمكن استخدام RIS أو MA لتحسين التغطية داخل المبنى (5 دقائق مناقشة، دقيقتان مشاركة)."
+                            ]
+                        },
+                        post: {
+                            title: "التطبيق والتعميق",
+                            items: [
+                                "**النشاط التطبيقي:**",
+                                "- **مقارنة تقنيات:** إعداد جدول مقارنة بين RIS و MA من حيث مبدأ العمل، المزايا، التحديات، والتطبيقات المحتملة.",
+                                "**المهام:**",
+                                "- **مهمة 1 (تقييمية - Google Form):** اختبار قصير (10 أسئلة) حول الأسطح الذكية العاكسة والهوائيات المتحركة.",
+                                "**الرابط:** <a href='https://forms.gle/YOUR_POST_QUIZ_LINK_4' target='_blank' class='text-blue-600 hover:underline'>اختبار المحاضرة 4</a>",
+                                "- **مهمة 2 (بحثية):** ابحث عن ورقة بحثية حديثة (من 2024-2025) تتناول تطبيقًا عمليًا لـ RIS-indexed multiple access (RIMA)، واكتب فقرة تشرح كيف يعمل هذا المخطط."
+                            ]
+                        }
+                    },
+                    softSkills: ["التفكير الإبداعي", "التحليلية", "التعاون"],
+                },
+                'lecture-5': {
+                    title: "المحاضرة الخامسة: مستقبل MIMO: التكامل مع الذكاء الاصطناعي والترددات الجديدة",
+                    objectives: {
+                        general: "أن يستشرف المتعلم مستقبل تقنية MIMO من خلال فهم تكاملها مع الذكاء الاصطناعي واستخدامها في الترددات الجديدة والاتصال ثلاثي الأبعاد.",
+                        behavioral: [
+                            "أن يشرح المتعلم كيف يمكن للذكاء الاصطناعي والتعلم الآلي تحسين أداء أنظمة Massive MIMO.",
+                            "أن يحدد المتعلم أهمية الترددات الجديدة (مثل التيراهيرتز) في تطوير MIMO.",
+                            "أن يصف المتعلم رؤية MIMO الموزع الشامل والاتصال ثلاثي الأبعاد في 6G."
+                        ]
+                    },
+                    concepts: {
+                        title: "نسيج MIMO المستقبلي",
+                        description: "مستقبل MIMO لا يكمن في زيادة عدد الهوائيات فحسب، بل في تكاملها الذكي مع التقنيات الأخرى لخلق شبكة شاملة وذكية ومتعددة الأبعاد.",
+                        integration: [
+                            { name: "الذكاء الاصطناعي", desc: "لإدارة الشبكة المؤتمتة والصيانة التنبؤية وتصميم الشبكات ذاتية التطور.", color: "bg-purple-100" },
+                            { name: "ترددات التيراهيرتز (THz)", desc: "لتوفير نطاق ترددي هائل للتطبيقات المستقبلية ودمج الاستشعار مع الاتصال (ISAC).", color: "bg-pink-100" },
+                            { name: "الاتصال ثلاثي الأبعاد", desc: "لدمج التغطية الأرضية والجوية والفضائية (الأقمار الصناعية) في شبكة واحدة متكاملة.", color: "bg-indigo-100" },
+                        ],
+                        visuals: `
+                            <h4 class="font-bold text-lg text-[#5B9A8B] mt-6 mb-4 text-center">تصور تفاعلي: قيود إشارات التيراهيرتز (THz)</h4>
+                            <p class="text-gray-600 text-center mb-4">شاهد كيف يمكن للعوائق أن تؤثر على إشارات التيراهيرتز.</p>
+                            <div class="thz-container">
+                                <div class="thz-sender">مرسل THz</div>
+                                <div class="thz-signal-path" id="thz-signal"></div>
+                                <div class="thz-obstacle" id="thz-obstacle">عائق</div>
+                                <div class="thz-receiver">مستقبل THz</div>
+                            </div>
+                            <div class="text-center mt-4">
+                                <button id="toggle-obstacle-btn" class="bg-[#5B9A8B] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#4a8070] transition-colors shadow-md">
+                                    إظهار/إخفاء العائق
+                                </button>
+                            </div>
+                        `
+                    },
+                    activities: {
+                        pre: {
+                            title: "التحضير الذاتي",
+                            items: [
+                                "**المواد التحضيرية:**",
+                                "- مقالة: \"AI Improves 5G Networks and XR Patent Innovation Trends\".",
+                                "- مقالة: \"THz ISAC: A Physical-Layer Perspective of Terahertz Integrated Sensing and Communication\".",
+                                "- فيديو قصير (5 دقائق): مقدمة عن مفهوم \"الذكاء الاصطناعي في الشبكات اللاسلكية\" (يُقدم رابط لفيديو توضيحي).",
+                                "**الاختبار القصير التمهيدي (Google Form):**",
+                                "- **الهدف:** تقييم المعرفة الأولية بدور الذكاء الاصطناعي والترددات الجديدة في الاتصالات.",
+                                "- **الأسئلة المقترحة:**",
+                                "  1. كيف يمكن للذكاء الاصطناعي أن يحسن أداء الشبكات اللاسلكية؟ (سؤال مفتوح)",
+                                "  2. ما هي المزايا التي تتوقعها من استخدام ترددات عالية جدًا (مثل التيراهيرتز) في الاتصالات اللاسلكية؟ (سؤال مفتوح)",
+                                "**الرابط:** <a href='https://forms.gle/YOUR_PRE_QUIZ_LINK_5' target='_blank' class='text-blue-600 hover:underline'>اختبار المحاضرة التمهيدي 5</a>",
+                                "**منتدى النقاش:**",
+                                "- **الهدف:** تشجيع التفكير في التحديات والفرص المستقبلية.",
+                                "- **السؤال المطروح:** \"ما هي التحديات التي قد تنشأ عن دمج الذكاء الاصطناعي بشكل عميق في تصميم وتشغيل أنظمة MIMO؟\""
+                            ]
+                        },
+                        during: {
+                            title: "أثناء المحاضرة (30 دقيقة)",
+                            items: [
+                                "**نشاط 1 (استطلاع رأي مباشر - 3 دقائق):**",
+                                "- **السؤال:** \"ما هو الجانب الأكثر إثارة في مستقبل MIMO؟\" (خيارات: الذكاء الاصطناعي، الترددات الجديدة، الاتصال ثلاثي الأبعاد، جميع ما سبق).",
+                                "**نشاط 2 (تفكير جماعي - غرف فرعية - 7 دقائق):**",
+                                "- **السيناريو:** عرض سيناريو: \"شركة طيران بدون طيار (درونز) ترغب في إنشاء شبكة اتصالات موثوقة لدعم أسطولها الكبير من الدرونز في مدينة كبيرة.\" اطلب من المتعلمين في مجموعات صغيرة (3-4 أفراد) اقتراح كيف يمكن لتقنيات MIMO المستقبلية (مع الذكاء الاصطناعي والترددات الجديدة) أن تدعم هذا السيناريو (5 دقائق مناقشة، دقيقتان مشاركة)."
+                            ]
+                        },
+                        post: {
+                            title: "التطبيق والتعميق",
+                            items: [
+                                "**النشاط التطبيقي:**",
+                                "- **تصميم مفهوم:** تخيل تطبيقًا مستقبليًا (مثلاً: جراحة عن بعد، مصنع ذكي مؤتمت بالكامل) يتطلب أقصى درجات السعة وزمن الوصول المنخفض. ارسم مخططًا مفاهيميًا يوضح كيف يمكن لـ MIMO المدعوم بالذكاء الاصطناعي والترددات الجديدة أن يدعم هذا التطبيق.",
+                                "**المهام:**",
+                                "- **مهمة 1 (تقييمية - Google Form):** اختبار قصير (10 أسئلة) حول مستقبل MIMO وتكامله مع الذكاء الاصطناعي والترددات الجديدة.",
+                                "**الرابط:** <a href='https://forms.gle/YOUR_POST_QUIZ_LINK_5' target='_blank' class='text-blue-600 hover:underline'>اختبار المحاضرة 5</a>",
+                                "- **مهمة 2 (بحثية):** ابحث عن مقالة حديثة (من 2024-2025) تتناول \"الاستشعار والاتصالات المتكاملة (ISAC)\" في سياق 6G، واكتب فقرة تشرح كيف يمكن لـ MIMO أن يلعب دورًا في هذه التقنية."
+                            ]
+                        }
+                    },
+                    softSkills: ["التفكير المستقبلي", "الابتكار", "التواصل التقني"],
+                },
+                analysis: {
+                    title: "أدوات التحليل والتقييم للحقيبة التعليمية",
+                    description: "لضمان الجودة والتحسين المستمر، تستخدم الحقيبة التعليمية مجموعة من الأدوات التحليلية المنهجية لتقييم فعاليتها وتحديد مجالات التطوير المستقبلية.",
+                    tools: [
+                        {
+                            name: "تحليل SWOT",
+                            desc: "أداة استراتيجية لتقييم نقاط القوة والضعف الداخلية، والفرص والتهديدات الخارجية المتعلقة بالحقيبة التعليمية.",
+                            items: {
+                                "نقاط القوة": "محتوى حديث، نهج مدمج، تفاعلية عالية.",
+                                "نقاط الضعف": "متطلبات تقنية، حاجة لمدربين خبراء.",
+                                "الفرص": "وصول أوسع، تحديث مستمر، شراكات صناعية.",
+                                "التهديدات": "تقادم سريع، منافسة، تحديات لوجستية."
+                            }
+                        },
+                        {
+                            name: "مخطط عظم السمكة (Ishikawa)",
+                            desc: "يُستخدم لتحديد الأسباب الجذرية للمشكلات المحتملة مثل انخفاض مشاركة المتعلمين، عبر تحليل فئات متعددة مثل الأفراد، العمليات، والمعدات.",
+                            items: {
+                                "المشكلة": "انخفاض مشاركة المتعلمين.",
+                                "الأسباب المحتملة": "تصميم غير فعال للأنشطة، محتوى غير جذاب، مشاكل تقنية، نقص تحفيز المتعلمين."
+                            }
+                        },
+                        {
+                            name: "عجلة ديمينغ (PDCA)",
+                            desc: "إطار عمل للتحسين المستمر يعتمد على دورة من أربع خطوات: خطط (Plan)، نفذ (Do)، تحقق (Check)، تصرف (Act) لمعالجة المشكلات وتحسين الجودة بشكل منهجي.",
+                             items: {
+                                "الخطوات": "1. التخطيط للتحسين. 2. تنفيذ التغيير على نطاق صغير. 3. التحقق من النتائج. 4. توحيد الحل الناجح أو إعادة التخطيط."
+                            }
+                        }
+                    ],
+                    evaluationForms: {
+                        title: "استبيانات التقييم الشاملة (Google Forms)",
+                        description: "بعد الانتهاء من جميع المحاضرات، يرجى ملء الاستبيانات التالية لتقديم ملاحظاتك القيمة.",
+                        items: [
+                            { name: "استبيان تقييم المدرب", link: "https://forms.gle/YOUR_TRAINER_SURVEY_LINK" },
+                            { name: "استبيان تقييم الحقيبة التعليمية", link: "https://forms.gle/YOUR_PACKAGE_SURVEY_LINK" },
+                            { name: "استبيان تقييم الإعدادات اللوجستية والإدارية", link: "https://forms.gle/YOUR_LOGISTICS_SURVEY_LINK" }
+                        ]
+                    }
+                }
+            };
+
+            const contentArea = document.getElementById('content-area');
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sidebar = document.getElementById('sidebar');
+            const menuToggle = document.getElementById('menu-toggle');
+            const menuOpenIcon = document.getElementById('menu-open-icon');
+            const menuCloseIcon = document.getElementById('menu-close-icon');
+
+            let currentChart = null;
+
+            const renderWelcome = (data) => `
+                <div class="bg-white p-6 rounded-xl shadow-md animate-fade-in">
+                    <h1 class="text-3xl md:text-4xl font-bold text-[#5B9A8B]">${data.title}</h1>
+                    <p class="mt-4 text-lg text-gray-600">${data.description}</p>
+                    <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${data.features.map(f => `
+                            <div class="flex items-center bg-gray-50 p-4 rounded-lg">
+                                <span class="text-2xl mr-4">${f.icon}</span>
+                                <span class="font-medium">${f.text}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            const renderLecture = (data) => {
+                const conceptsHtml = data.concepts.flow ? `
+                    <div class="flex flex-wrap items-stretch justify-center gap-2 md:gap-0">
+                        ${data.concepts.flow.map((item, index) => `
+                            ${index > 0 ? `<div class="flow-diagram-arrow hidden md:flex items-center justify-center">→</div>` : ''}
+                            <div class="w-full md:w-auto flex-grow md:flex-grow-0 p-2">
+                                <div class="flow-diagram-item h-full ${item.color}">
+                                    <div>
+                                        <p class="font-bold">${item.name}</p>
+                                        <p class="text-xs mt-1 text-gray-600">${item.details}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : data.concepts.chartData ? `
+                    <div class="chart-container"><canvas id="lectureChart"></canvas></div>
+                ` : data.concepts.comparison ? `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        ${data.concepts.comparison.map(tech => `
+                            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                <h4 class="font-bold text-lg text-[#5B9A8B]">${tech.name}</h4>
+                                <ul class="mt-2 list-disc list-inside text-gray-700 space-y-1">
+                                    ${tech.features.map(f => `<li>${f}</li>`).join('')}
+                                </ul>
+                            </div>
+                        `).join('')}
+                    </div>
+                `: data.concepts.diagrams ? `
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        ${data.concepts.diagrams.map(d => `
+                            <div class="bg-gray-50 p-6 rounded-lg text-center border border-gray-200">
+                                <div class="text-4xl">${d.icon}</div>
+                                <h4 class="font-bold text-lg mt-3 text-[#5B9A8B]">${d.name}</h4>
+                                <p class="mt-2 text-gray-600">${d.desc}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : data.concepts.integration ? `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                       ${data.concepts.integration.map(i => `
+                            <div class="p-6 rounded-lg ${i.color}">
+                                <h4 class="font-bold text-lg text-gray-800">${i.name}</h4>
+                                <p class="mt-2 text-gray-700">${i.desc}</p>
+                            </div>
+                       `).join('')}
+                    </div>
+                ` : '';
+                
+                // Add the visual element if it exists
+                const visualsHtml = data.concepts.visuals ? data.concepts.visuals : '';
+
+                return `
+                <div class="space-y-8 animate-fade-in">
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h1 class="text-3xl font-bold text-[#5B9A8B]">${data.title}</h1>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-2xl font-semibold mb-4 border-b pb-2">الأهداف التعليمية</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-bold text-gray-800">الهدف العام:</h4>
+                                <p class="text-gray-600 mt-1">${data.objectives.general}</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-800">الأهداف السلوكية:</h4>
+                                <ul class="list-disc list-inside mt-1 text-gray-600 space-y-1">
+                                    ${data.objectives.behavioral.map(o => `<li>${o}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-2xl font-semibold mb-4 border-b pb-2">${data.concepts.title}</h3>
+                        <p class="text-gray-600 mb-6">${data.concepts.description}</p>
+                        ${conceptsHtml}
+                        ${visualsHtml}
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-2xl font-semibold mb-4 border-b pb-2">الأنشطة والمهام</h3>
+                        <div id="tabs-container" class="mb-4 flex space-x-1 space-x-reverse border-b">
+                           <button data-tab="pre" class="tab-btn px-4 py-2 font-medium text-gray-600 rounded-t-lg">قبل المحاضرة</button>
+                           <button data-tab="during" class="tab-btn px-4 py-2 font-medium text-gray-600 rounded-t-lg">أثناء المحاضرة</button>
+                           <button data-tab="post" class="tab-btn px-4 py-2 font-medium text-gray-600 rounded-t-lg">بعد المحاضرة</button>
+                        </div>
+                        <div id="tabs-content">
+                            <!-- Tab content will be injected here -->
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-2xl font-semibold mb-3 border-b pb-2">المهارات الناعمة المستهدفة</h3>
+                        <div class="flex flex-wrap gap-3">
+                            ${data.softSkills.map(s => `<span class="bg-teal-100 text-teal-800 px-3 py-1 rounded-full font-medium">${s}</span>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            };
+
+            const renderAnalysis = (data) => `
+                <div class="space-y-8 animate-fade-in">
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h1 class="text-3xl font-bold text-[#5B9A8B]">${data.title}</h1>
+                        <p class="mt-4 text-lg text-gray-600">${data.description}</p>
+                    </div>
+
+                    ${data.tools.map(tool => `
+                        <div class="bg-white p-6 rounded-xl shadow-md">
+                            <h3 class="text-2xl font-semibold mb-4 border-b pb-2">${tool.name}</h3>
+                            <p class="text-gray-600 mb-4">${tool.desc}</p>
+                            <div class="space-y-2">
+                                ${Object.entries(tool.items).map(([key, value]) => `
+                                    <div class="bg-gray-50 p-3 rounded-lg">
+                                        <span class="font-bold text-gray-800">${key}:</span>
+                                        <span class="text-gray-700"> ${value}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-2xl font-semibold mb-4 border-b pb-2">${data.evaluationForms.title}</h3>
+                        <p class="text-gray-600 mb-4">${data.evaluationForms.description}</p>
+                        <ul class="list-unstyled space-y-3">
+                            ${data.evaluationForms.items.map(form => `
+                                <li>
+                                    <a href="${form.link}" target="_blank" class="flex items-center text-blue-600 hover:underline">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M11 3a1 1 0 100 2h2a1 1 0 100-2h-2z" />
+                                            <path fill-rule="evenodd" d="M11 2a2 2 0 00-2 2v2H7a2 2 0 00-2 2v4a2 2 0 002 2h4a2 2 0 002-2V8a2 2 0 00-2-2h-2V4a2 2 0 00-2-2zm-5 6a1 1 0 011-1h6a1 1 0 011 1v4a1 1 0 01-1 1H7a1 1 0 01-1-1V8z" clip-rule="evenodd" />
+                                        </svg>
+                                        ${form.name}
+                                    </a>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+            
+            const setupTabs = (activities) => {
+                const tabsContainer = document.getElementById('tabs-container');
+                const tabsContent = document.getElementById('tabs-content');
+                if (!tabsContainer || !tabsContent) return;
+
+                const renderTabContent = (tabKey) => {
+                    const content = activities[tabKey];
+                    if (!content) return;
+                    tabsContent.innerHTML = `
+                        <div class="animate-fade-in-fast">
+                            <h4 class="font-bold text-lg mb-2">${content.title}</h4>
+                            <ul class="list-unstyled space-y-2 text-gray-700">
+                                ${content.items.map(item => `<li>${item.replace(/\n/g, '<br>')}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                };
+
+                tabsContainer.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('tab-btn')) {
+                        const tabKey = e.target.dataset.tab;
+                        tabsContainer.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                        e.target.classList.add('active');
+                        renderTabContent(tabKey);
+                    }
+                });
+                
+                tabsContainer.querySelector('.tab-btn').click();
+            };
+
+            const renderChart = (chartData) => {
+                const ctx = document.getElementById('lectureChart')?.getContext('2d');
+                if (!ctx) return;
+
+                if (currentChart) {
+                    currentChart.destroy();
+                }
+
+                currentChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartData.labels,
+                        datasets: [{
+                            label: 'مستوى التأثير والتعقيد',
+                            data: chartData.data,
+                            backgroundColor: 'rgba(91, 154, 139, 0.6)',
+                            borderColor: 'rgba(91, 154, 139, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                rtl: true,
+                                bodyFont: {
+                                    family: 'Tajawal'
+                                },
+                                titleFont: {
+                                    family: 'Tajawal'
+                                }
+                            }
+                        }
+                    }
+                });
+            };
+
+            // Lecture 1 Visualization: Beamforming
+            const setupLecture1Visualization = () => {
+                const antennaArrayDiv = document.getElementById('antenna-array');
+                const beam = document.getElementById('beam');
+                const lowAntennasBtn = document.getElementById('antennas-low-btn');
+                const mediumAntennasBtn = document.getElementById('antennas-medium-btn');
+                const highAntennasBtn = document.getElementById('antennas-high-btn');
+
+                if (!antennaArrayDiv || !beam || !lowAntennasBtn || !mediumAntennasBtn || !highAntennasBtn) return;
+
+                const updateBeam = (antennaCount) => {
+                    antennaArrayDiv.innerHTML = ''; // Clear existing antennas
+                    for (let i = 0; i < antennaCount; i++) {
+                        const antenna = document.createElement('div');
+                        antenna.className = 'antenna';
+                        antennaArrayDiv.appendChild(antenna);
+                    }
+
+                    let beamHeight;
+                    if (antennaCount === 3) beamHeight = 80;
+                    else if (antennaCount === 10) beamHeight = 50;
+                    else if (antennaCount === 30) beamHeight = 20;
+
+                    beam.style.height = `${beamHeight}px`;
+                    beam.style.opacity = '0.8';
+                };
+                
+                lowAntennasBtn.addEventListener('click', () => updateBeam(3));
+                mediumAntennasBtn.addEventListener('click', () => updateBeam(10));
+                highAntennasBtn.addEventListener('click', () => updateBeam(30));
+
+                // Initial state
+                updateBeam(10); 
+            };
+
+            // Lecture 2 Visualization: Pilot Contamination
+            const setupLecture2Visualization = () => {
+                const user1 = document.getElementById('user1');
+                const user2 = document.getElementById('user2');
+                const pilot1 = document.getElementById('pilot1');
+                const pilot2 = document.getElementById('pilot2');
+                const startPilotsBtn = document.getElementById('start-pilots-btn');
+                const resetPilotsBtn = document.getElementById('reset-pilots-btn');
+                const contaminationMsg = document.getElementById('contamination-msg');
+
+                if (!user1 || !user2 || !pilot1 || !pilot2 || !startPilotsBtn || !resetPilotsBtn || !contaminationMsg) return;
+
+                const bs1 = document.querySelector('.bs:nth-of-type(1)'); // First BS
+                const bs2 = document.querySelector('.bs:nth-of-type(2)'); // Second BS
+
+                const getElementCenter = (el) => {
+                    const rect = el.getBoundingClientRect();
+                    const containerRect = el.parentElement.getBoundingClientRect();
+                    return {
+                        x: (rect.left + rect.right) / 2 - containerRect.left,
+                        y: (rect.top + rect.bottom) / 2 - containerRect.top
+                    };
+                };
+
+                const animatePilots = () => {
+                    const user1Pos = getElementCenter(user1);
+                    const user2Pos = getElementCenter(user2);
+                    const bs1Pos = getElementCenter(bs1);
+                    const bs2Pos = getElementCenter(bs2);
+
+                    // Reset signals
+                    pilot1.style.opacity = 0;
+                    pilot2.style.opacity = 0;
+                    contaminationMsg.style.opacity = 0;
+                    pilot1.style.transition = 'none';
+                    pilot2.style.transition = 'none';
+                    pilot1.style.left = `${user1Pos.x}px`;
+                    pilot1.style.top = `${user1Pos.y}px`;
+                    pilot2.style.left = `${user2Pos.x}px`;
+                    pilot2.style.top = `${user2Pos.y}px`;
+                    void pilot1.offsetWidth; // Force reflow
+
+                    pilot1.style.transition = 'all 1.5s ease-out';
+                    pilot2.style.transition = 'all 1.5s ease-out';
+
+                    pilot1.style.opacity = 1;
+                    pilot2.style.opacity = 1;
+
+                    // User 1 pilot travels to BS1 and BS2 (weakly)
+                    pilot1.style.left = `${bs1Pos.x}px`;
+                    pilot1.style.top = `${bs1Pos.y}px`;
+                    
+                    // User 2 pilot travels to BS2 and BS1 (weakly)
+                    pilot2.style.left = `${bs2Pos.x}px`;
+                    pilot2.style.top = `${bs2Pos.y}px`;
+
+                    setTimeout(() => {
+                        // Simulate contamination by having pilot2 briefly appear at BS1 location (conceptually)
+                        pilot2.style.transition = 'none'; // Temporarily disable transition
+                        pilot2.style.left = `${bs1Pos.x}px`;
+                        pilot2.style.top = `${bs1Pos.y}px`;
+                        pilot2.style.opacity = 0.5; // Simulate weak reception at other BS
+                        contaminationMsg.style.opacity = 1;
+                    }, 1500); // After initial travel
+
+                    setTimeout(() => {
+                        resetPilots();
+                    }, 3000); // Reset after contamination shown
+                };
+
+                const resetPilots = () => {
+                    pilot1.style.transition = 'opacity 0.5s';
+                    pilot2.style.transition = 'opacity 0.5s';
+                    pilot1.style.opacity = 0;
+                    pilot2.style.opacity = 0;
+                    contaminationMsg.style.opacity = 0;
+                    // Reset positions for next animation
+                    const user1Pos = getElementCenter(user1);
+                    const user2Pos = getElementCenter(user2);
+                    pilot1.style.left = `${user1Pos.x}px`;
+                    pilot1.style.top = `${user1Pos.y}px`;
+                    pilot2.style.left = `${user2Pos.x}px`;
+                    pilot2.style.top = `${user2Pos.y}px`;
+                };
+
+                startPilotsBtn.addEventListener('click', animatePilots);
+                resetPilotsBtn.addEventListener('click', resetPilots);
+                resetPilots();
+            };
+
+            // Lecture 3 Visualization: Cell-Free mMIMO
+            const setupLecture3Visualization = () => {
+                const toggleBtn = document.getElementById('toggle-cell-free-btn');
+                const resetBtn = document.getElementById('reset-cell-free-btn');
+                const cellBoundaries = document.querySelectorAll('.cell-boundary');
+                const accessPoints = document.querySelectorAll('.access-point');
+
+                if (!toggleBtn || !resetBtn || cellBoundaries.length === 0 || accessPoints.length === 0) return;
+
+                let isCellFree = false;
+
+                const updateDisplay = () => {
+                    cellBoundaries.forEach(cell => {
+                        cell.classList.toggle('hidden', isCellFree);
+                    });
+                    accessPoints.forEach(ap => {
+                        ap.classList.toggle('visible', isCellFree);
+                    });
+                    toggleBtn.textContent = isCellFree ? 'إظهار الخلايا التقليدية' : 'تفعيل Cell-Free';
+                };
+
+                toggleBtn.addEventListener('click', () => {
+                    isCellFree = !isCellFree;
+                    updateDisplay();
+                });
+
+                resetBtn.addEventListener('click', () => {
+                    isCellFree = false;
+                    updateDisplay();
+                });
+
+                // Initial state
+                updateDisplay();
+            };
+
+
+            // Lecture 4 Visualization: RIS
+            const setupRISVisualization = () => {
+                const signal = document.getElementById('signal');
+                const startBtn = document.getElementById('start-reflection-btn');
+                const resetBtn = document.getElementById('reset-reflection-btn');
+                const simulationContainer = document.querySelector('.ris-simulation-container');
+                const risSource = document.querySelector('.ris-source');
+                const risElement = document.querySelector('.ris-element');
+                const risTarget = document.querySelector('.ris-target');
+
+                if (!signal || !startBtn || !resetBtn || !simulationContainer || !risSource || !risElement || !risTarget) return;
+
+                // Function to get accurate center position of an element relative to its parent
+                const getElementCenterInParent = (el, parentEl) => {
+                    const rect = el.getBoundingClientRect();
+                    const parentRect = parentEl.getBoundingClientRect();
+                    return {
+                        x: (rect.left + rect.right) / 2 - parentRect.left,
+                        y: (rect.top + rect.bottom) / 2 - parentRect.top
+                    };
+                };
+
+                const animateReflection = () => {
+                    const sourceCenter = getElementCenterInParent(risSource, simulationContainer);
+                    const risCenter = getElementCenterInParent(risElement, simulationContainer);
+                    const targetCenter = getElementCenterInParent(risTarget, simulationContainer);
+
+                    // Reset signal to source position immediately, with no transition
+                    signal.style.transition = 'none';
+                    signal.style.left = `${sourceCenter.x}px`;
+                    signal.style.top = `${sourceCenter.y}px`;
+                    signal.style.opacity = 0;
+                    signal.classList.remove('active');
+
+                    // Force reflow to apply reset before starting new transition
+                    void signal.offsetWidth; 
+
+                    // Phase 1: Source to RIS
+                    signal.style.transition = 'left 1.5s ease-out, top 1.5s ease-out, opacity 0.5s';
+                    signal.style.left = `${risCenter.x}px`;
+                    signal.style.top = `${risCenter.y}px`;
+                    signal.style.opacity = 1;
+                    signal.classList.add('active');
+
+                    setTimeout(() => {
+                        // Phase 2: RIS to Target
+                        signal.style.transition = 'left 1.5s ease-out, top 1.5s ease-out';
+                        signal.style.left = `${targetCenter.x}px`;
+                        signal.style.top = `${targetCenter.y}px`;
+                    }, 1500); // Duration of first phase (1.5 seconds)
+                };
+
+                const resetVisualization = () => {
+                    const sourceCenter = getElementCenterInParent(risSource, simulationContainer);
+                    signal.style.transition = 'opacity 0.5s, left 0.5s, top 0.5s'; /* Add transitions for reset */
+                    signal.style.opacity = 0;
+                    signal.classList.remove('active');
+                    // Reset to initial visual position (source)
+                    signal.style.left = `${sourceCenter.x}px`;
+                    signal.style.top = `${sourceCenter.y}px`;
+                };
+
+                startBtn.addEventListener('click', animateReflection);
+                resetBtn.addEventListener('click', resetVisualization);
+
+                // Initial reset on load
+                resetVisualization(); 
+            };
+
+            // Lecture 5 Visualization: THz Obstacle
+            const setupLecture5Visualization = () => {
+                const toggleObstacleBtn = document.getElementById('toggle-obstacle-btn');
+                const thzObstacle = document.getElementById('thz-obstacle');
+                const thzSignal = document.getElementById('thz-signal');
+
+                if (!toggleObstacleBtn || !thzObstacle || !thzSignal) return;
+
+                let isObstacleVisible = false;
+
+                const updateDisplay = () => {
+                    if (isObstacleVisible) {
+                        thzObstacle.classList.add('visible');
+                        thzSignal.classList.add('blocked');
+                    } else {
+                        thzObstacle.classList.remove('visible');
+                        thzSignal.classList.remove('blocked');
+                    }
+                };
+
+                toggleObstacleBtn.addEventListener('click', () => {
+                    isObstacleVisible = !isObstacleVisible;
+                    updateDisplay();
+                });
+
+                // Initial state
+                updateDisplay();
+            };
+
+            const navigate = (hash) => {
+                const id = hash.substring(1);
+                const data = contentData[id];
+
+                if (!data) return;
+                
+                if(id === 'welcome') {
+                    contentArea.innerHTML = renderWelcome(data);
+                } else if(id === 'analysis') {
+                    contentArea.innerHTML = renderAnalysis(data);
+                } else {
+                    contentArea.innerHTML = renderLecture(data);
+                    if (data.activities) {
+                        setupTabs(data.activities);
+                    }
+                    if (data.concepts.chartData) {
+                        setTimeout(() => renderChart(data.concepts.chartData), 10);
+                    }
+                    // Setup specific lecture visualizations
+                    if (id === 'lecture-1' && data.concepts.visuals) {
+                        setTimeout(setupLecture1Visualization, 100); 
+                    } else if (id === 'lecture-2' && data.concepts.visuals) {
+                        setTimeout(setupLecture2Visualization, 100);
+                    } else if (id === 'lecture-3' && data.concepts.visuals) {
+                        setTimeout(setupLecture3Visualization, 100);
+                    } else if (id === 'lecture-4' && data.concepts.visuals) {
+                        setTimeout(setupRISVisualization, 100); 
+                    } else if (id === 'lecture-5' && data.concepts.visuals) {
+                        setTimeout(setupLecture5Visualization, 100);
+                    }
+                }
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === hash) {
+                        link.classList.add('active');
+                    }
+                });
+                
+                if (window.innerWidth < 1024) {
+                    sidebar.classList.add('translate-x-full');
+                    menuOpenIcon.classList.remove('hidden');
+                    menuCloseIcon.classList.add('hidden');
+                }
+                
+                window.scrollTo(0,0);
+            };
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const hash = e.currentTarget.getAttribute('href');
+                    navigate(hash);
+                    window.location.hash = hash;
+                });
+            });
+
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('translate-x-full');
+                menuOpenIcon.classList.toggle('hidden');
+                menuCloseIcon.classList.toggle('hidden');
+            });
+
+
+            const initialHash = window.location.hash || '#welcome';
+            navigate(initialHash);
+        });
+    </script>
+</body>
+</html>
